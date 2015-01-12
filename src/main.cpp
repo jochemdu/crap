@@ -51,9 +51,9 @@ unsigned int nCoinCacheSize = 5000;
 uint256 hashGenesisBlock("0xd9693b5ae46b91e8dfe26c3c0d693f28947b0bce3bec3d26c8179ca4ebaad60d");
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for transaction creation) */
-int64_t CTransaction::nMinTxFee = 2000000;  // Override with -mintxfee
+int64_t CTransaction::nMinTxFee = 200000000000;  // Override with -mintxfee
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying and mining) */
-int64_t CTransaction::nMinRelayTxFee = 1000;
+int64_t CTransaction::nMinRelayTxFee = 200000000000;
 
 static CMedianFilter<int> cPeerBlockCounts(8, 0); // Amount of blocks that other nodes claim to have
 
@@ -1203,27 +1203,18 @@ const CBlockIndex* GetLastBlockIndexForAlgo(const CBlockIndex* pindex, int algo)
     }
 }
 
-static const int64_t nDiffChangeTarget = 0; // Patch effective @ block 67200
-
-//mulitAlgoTargetChange = 145000 located in main.h
+// static const int64_t nDiffChangeTarget = 0; // Patch effective @ block 0
 
 int64_t GetBlockValue(int nHeight, int64_t nFees)
 {
    int64_t nSubsidy = COIN;  
    if(nHeight <= 1){  // block 1 to distribute coins from old chain
-      nSubsidy = 7000 * COIN;
-   } else {
-      nSubsidy = 10 * COIN; 
+      nSubsidy = 35000 * COIN;
+   } 
+   if(nHeight <= 911200) { // We'll have a reward 0.25 for 911200 blocks, that makes total POW coins 262.800
+      nSubsidy = 0.25 * COIN; 
    }
    
-         
-
-
-   //make sure the reward is at least 1 DGB
-   if(nSubsidy < COIN) {
-      nSubsidy = COIN;
-   }
-
    return nSubsidy + nFees;
 }
 
@@ -1245,6 +1236,10 @@ static const int64_t nAveragingTargetTimespan = nAveragingInterval * multiAlgoTa
 
 static const int64_t nMaxAdjustDown = 40; // 40% adjustment down
 static const int64_t nMaxAdjustUp = 20; // 20% adjustment up
+
+static const int64_t nMaxAdjustDownV3 = 16; // 16% adjustment down
+static const int64_t nMaxAdjustUpV3 = 8; // 8% adjustment up
+static const int64_t nLocalDifficultyAdjustment = 4; // 4% down, 16% up
 
 static const int64_t nTargetTimespanAdjDown = multiAlgoTargetTimespan * (100 + nMaxAdjustDown) / 100;
 
@@ -1326,9 +1321,93 @@ static unsigned int GetNextWorkRequiredV2(const CBlockIndex* pindexLast, const C
 
     return bnNew.GetCompact();
 }
+
+static unsigned int GetNextWorkRequiredV3(const CBlockIndex* pindexLast, const CBlockHeader *pblock, int algo)
+{
+    unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit(algo).GetCompact();
+
+    // Genesis block
+    if (pindexLast == NULL)
+        return nProofOfWorkLimit;
+
+    if (TestNet())
+    {
+        // Special difficulty rule for testnet:
+        // If the new block's timestamp is more than 2* 10 minutes
+        // then allow mining of a min-difficulty block.
+        if (pblock->nTime > pindexLast->nTime + nTargetSpacing*2)
+            return nProofOfWorkLimit;
+        else
+        {
+            // Return the last non-special-min-difficulty-rules-block
+            const CBlockIndex* pindex = pindexLast;
+            while (pindex->pprev && pindex->nHeight % nInterval != 0 && pindex->nBits == nProofOfWorkLimit)
+                pindex = pindex->pprev;
+            return pindex->nBits;
+        }
+    }
+
+    // find first block in averaging interval
+    // Go back by what we want to be nAveragingInterval blocks per algo
+    const CBlockIndex* pindexFirst = pindexLast;
+    for (int i = 0; pindexFirst && i < NUM_ALGOS*nAveragingInterval; i++)
+    {
+        pindexFirst = pindexFirst->pprev;
+    }
+    const CBlockIndex* pindexPrevAlgo = GetLastBlockIndexForAlgo(pindexLast, algo);
+    if (pindexPrevAlgo == NULL || pindexFirst == NULL)
+        return nProofOfWorkLimit; // not enough blocks available
+
+    // Limit adjustment step
+    // Use medians to prevent time-warp attacks
+    int64_t nActualTimespan = pindexLast->GetMedianTimePast() - pindexFirst->GetMedianTimePast();
+    nActualTimespan = nAveragingTargetTimespan + (nActualTimespan - nAveragingTargetTimespan)/6;
+    LogPrintf("  nActualTimespan = %d before bounds\n", nActualTimespan);
+    if (nActualTimespan < nMinActualTimespanV3)
+        nActualTimespan = nMinActualTimespanV3;
+    if (nActualTimespan > nMaxActualTimespanV3)
+        nActualTimespan = nMaxActualTimespanV3;
+
+    // Global retarget
+    CBigNum bnNew;
+    bnNew.SetCompact(pindexPrevAlgo->nBits);
+    bnNew *= nActualTimespan;
+    bnNew /= nAveragingTargetTimespan;
+
+    // Per-algo retarget
+    int nAdjustments = pindexPrevAlgo->nHeight - pindexLast->nHeight + NUM_ALGOS - 1;
+    if (nAdjustments > 0)
+    {
+        for (int i = 0; i < nAdjustments; i++)
+        {
+            bnNew /= 100 + nLocalDifficultyAdjustment;
+            bnNew *= 100;
+        }
+    }
+    if (nAdjustments < 0)
+    {
+        for (int i = 0; i < -nAdjustments; i++)
+        {
+            bnNew *= 100 + nLocalDifficultyAdjustment;
+            bnNew /= 100;
+        }
+    }
+
+    if (bnNew > Params().ProofOfWorkLimit(algo))
+        bnNew = Params().ProofOfWorkLimit(algo);
+
+    /// debug print
+    LogPrintf("GetNextWorkRequired RETARGET\n");
+    LogPrintf("nTargetTimespan = %d    nActualTimespan = %d\n", nTargetTimespan, nActualTimespan);
+    LogPrintf("Before: %08x  %s\n", pindexLast->nBits, CBigNum().SetCompact(pindexLast->nBits).getuint256().ToString());
+    LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString());
+
+    return bnNew.GetCompact();
+}
+
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, int algo)
 {
-        return GetNextWorkRequiredV2(pindexLast, pblock, algo);
+        return GetNextWorkRequiredV3(pindexLast, pblock, algo);
 }
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits, int algo)
@@ -1439,7 +1518,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
         pfork = pfork->pprev;
     }
 
-    // We define a condition which we should warn the user about as a fork of at least 7 blocks
+    // We define a condition which we should warn the user about as a fork of at least 20 blocks
     // who's tip is within 72 blocks (+/- 12 hours if no one mines it) of ours
     // We use 7 blocks rather arbitrarily as it represents just under 10% of sustained network
     // hash rate operating on the fork.
@@ -1447,7 +1526,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     // We define it this way because it allows us to only store the highest fork tip (+ base) which meets
     // the 7-block condition and from this always have the most-likely-to-cause-warning fork
     if (pfork && (!pindexBestForkTip || (pindexBestForkTip && pindexNewForkTip->nHeight > pindexBestForkTip->nHeight)) &&
-            pindexNewForkTip->nChainWork - pfork->nChainWork > (pfork->GetBlockWorkAdjusted() * 7).getuint256() &&
+            pindexNewForkTip->nChainWork - pfork->nChainWork > (pfork->GetBlockWorkAdjusted() * 20).getuint256() &&
             chainActive.Height() - pindexNewForkTip->nHeight < 72)
     {
         pindexBestForkTip = pindexNewForkTip;
@@ -1834,8 +1913,6 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
 
     int64_t nStart = GetTimeMicros();
     int64_t nFees = 0;
-	int64_t nValueIn = 0;
-    int64_t nValueOut = 0;
     int nInputs = 0;
     unsigned int nSigOps = 0;
     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));

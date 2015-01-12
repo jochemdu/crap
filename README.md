@@ -48,7 +48,8 @@ Technical Specifications
 
  - MultiAlgo POW (Scrypt, SHA256D, Qubit, Skein and Groestl) algorithms
  - 30 Second block Target (2.5 min per Algo)
- - 1 coins per block
+ - 0.25 coin per block
+ - Maximum coins
  - Difficulty retarget every 1 block (2.5 Min) Averaged over previous 10 blocks per algo
  
 Links

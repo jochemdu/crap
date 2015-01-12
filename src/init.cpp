@@ -218,7 +218,6 @@ std::string HelpMessage(HelpMessageMode hmm)
     strUsage += "  -bind=<addr>           " + _("Bind to given address and always listen on it. Use [host]:port notation for IPv6") + "\n";
     strUsage += "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n";
     strUsage += "  -discover              " + _("Discover own IP address (default: 1 when listening and no -externalip)") + "\n";
-	strUsage += "  -irc                   " + _("Find peers using internet relay chat (default: 0)") + "\n";
     strUsage += "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + " " + _("(default: 1)") + "\n";
     strUsage += "  -dnsseed               " + _("Find peers using DNS lookup (default: 1 unless -connect)") + "\n";
     strUsage += "  -externalip=<ip>       " + _("Specify your own public address") + "\n";

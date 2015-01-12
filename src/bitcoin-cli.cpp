@@ -44,9 +44,9 @@ static bool AppInitRPC(int argc, char* argv[])
         // First part of help message is specific to RPC client
         std::string strUsage = _("UnattainiumV2 Core RPC client version") + " " + FormatFullVersion() + "\n\n" +
             _("Usage:") + "\n" +
-              "  XXname-cliXX [options] <command> [params]  " + _("Send command to UnattainiumV2 Core") + "\n" +
-              "  XXname-cliXX [options] help                " + _("List commands") + "\n" +
-              "  XXname-cliXX [options] help <command>      " + _("Get help for a command") + "\n";
+              "  unattainiumv2-cli [options] <command> [params]  " + _("Send command to UnattainiumV2 Core") + "\n" +
+              "  unattainiumv2-cli [options] help                " + _("List commands") + "\n" +
+              "  unattainiumv2-cli [options] help <command>      " + _("Get help for a command") + "\n";
 
         strUsage += "\n" + HelpMessageCli(true);
 

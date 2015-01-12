@@ -231,8 +231,8 @@ public:
 
         vFixedSeeds.clear();
         vSeeds.clear();
-        //vSeeds.push_back(CDNSSeedData("unattainiumv2.petertodd.org", "testnet-seed.unattainiumv2.petertodd.org"));
-        //vSeeds.push_back(CDNSSeedData("bluematt.me", "testnet-seed.bluematt.me"));
+        //vSeeds.push_back(CDNSSeedData("name", "host"));
+        //vSeeds.push_back(CDNSSeedData("name", "host"));
 
         base58Prefixes[PUBKEY_ADDRESS] = list_of(111);
         base58Prefixes[SCRIPT_ADDRESS] = list_of(196);
