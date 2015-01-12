@@ -56,6 +56,7 @@ static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x1000000; // 16 MiB
 static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
 static const int COINBASE_MATURITY = 120;
+//static const int COINBASE_MATURITY_2 = 100;
 /** Threshold for nLockTime: below this value it is interpreted as block number, otherwise as UNIX timestamp. */
 static const unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
 /** Maximum number of script-checking threads allowed */
@@ -702,7 +703,10 @@ public:
 
     // height of the entry in the chain. The genesis block has height 0
     int nHeight;
-
+	
+	// track money supply
+	uint64_t nMoneySupply;
+	
     // Which # file this block is stored in (blk?????.dat)
     int nFile;
 
@@ -744,6 +748,7 @@ public:
         nDataPos = 0;
         nUndoPos = 0;
         nChainWork = 0;
+		nMoneySupply = 0;
         nTx = 0;
         nChainTx = 0;
         nStatus = 0;
@@ -765,6 +770,7 @@ public:
         nDataPos = 0;
         nUndoPos = 0;
         nChainWork = 0;
+		nMoneySupply = 0;
         nTx = 0;
         nChainTx = 0;
         nStatus = 0;
@@ -831,7 +837,6 @@ public:
 
     int GetAlgoWorkFactor() const 
     {
-
         if (TestNet() && (nHeight < 100))
         {
             return 1;
@@ -897,8 +902,9 @@ public:
 
     std::string ToString() const
     {
-        return strprintf("CBlockIndex(pprev=%p, nHeight=%d, merkle=%s, hashBlock=%s)",
+        return strprintf("CBlockIndex(pprev=%p, nHeight=%d, nMoneySupply=%s, merkle=%s, hashBlock=%s)",
             pprev, nHeight,
+			FormatMoney(nMoneySupply).c_str(),
             hashMerkleRoot.ToString().c_str(),
             GetBlockHash().ToString().c_str());
     }
@@ -932,6 +938,7 @@ public:
             READWRITE(VARINT(nVersion));
 
         READWRITE(VARINT(nHeight));
+		READWRITE(nMoneySupply);
         READWRITE(VARINT(nStatus));
         READWRITE(VARINT(nTx));
         if (nStatus & (BLOCK_HAVE_DATA | BLOCK_HAVE_UNDO))
