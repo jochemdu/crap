@@ -1213,7 +1213,7 @@ int64_t GetBlockValue(int nHeight, int64_t nFees)
    if(nHeight <= 1){  // block 1 to distribute coins from old chain
       nSubsidy = 35000 * COIN;
    } 
-   if(nHeight <= 911200) { // We'll have a reward 0.25 for 911200 blocks, that makes total POW coins 262.800
+   else if(nHeight <= 911200) { // We'll have a reward 0.25 for 911200 blocks, that makes total POW coins 262.800
       nSubsidy = 0.25 * COIN; 
    }
    
@@ -1260,71 +1260,6 @@ static const int64_t nMinActualTimespan = nAveragingTargetTimespan * (100 - nMax
 static const int64_t nMaxActualTimespan = nAveragingTargetTimespan * (100 + nMaxAdjustDown) / 100;
 static const int64_t nMinActualTimespanV3 = nAveragingTargetTimespan * (100 - nMaxAdjustUpV3) / 100;
 static const int64_t nMaxActualTimespanV3 = nAveragingTargetTimespan * (100 + nMaxAdjustDownV3) / 100;
-
-static unsigned int GetNextWorkRequiredV2(const CBlockIndex* pindexLast, const CBlockHeader *pblock, int algo)
-{
-    unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit(algo).GetCompact();
-
-    // Genesis block
-    if (pindexLast == NULL)
-        return nProofOfWorkLimit;
-
-    if (TestNet())
-    {
-        // Special difficulty rule for testnet:
-        // If the new block's timestamp is more than 2* 10 minutes
-        // then allow mining of a min-difficulty block.
-        if (pblock->nTime > pindexLast->nTime + nTargetSpacing*2)
-            return nProofOfWorkLimit;
-        else
-        {
-            // Return the last non-special-min-difficulty-rules-block
-            const CBlockIndex* pindex = pindexLast;
-            while (pindex->pprev && pindex->nHeight % nInterval != 0 && pindex->nBits == nProofOfWorkLimit)
-                pindex = pindex->pprev;
-            return pindex->nBits;
-        }
-    }
-
-    // find previous block with same algo
-    const CBlockIndex* pindexPrev = GetLastBlockIndexForAlgo(pindexLast, algo);
-    
-    // find first block in averaging interval
-    // Go back by what we want to be nAveragingInterval blocks
-    const CBlockIndex* pindexFirst = pindexPrev;
-    for (int i = 0; pindexFirst && i < nAveragingInterval - 1; i++)
-    {
-        pindexFirst = pindexFirst->pprev;
-        pindexFirst = GetLastBlockIndexForAlgo(pindexFirst, algo);
-    }
-    if (pindexFirst == NULL)
-        return nProofOfWorkLimit; // not nAveragingInterval blocks of this algo available
-
-    // Limit adjustment step
-    int64_t nActualTimespan = pindexPrev->GetBlockTime() - pindexFirst->GetBlockTime();
-    LogPrintf("  nActualTimespan = %d before bounds\n", nActualTimespan);
-    if (nActualTimespan < nMinActualTimespan)
-        nActualTimespan = nMinActualTimespan;
-    if (nActualTimespan > nMaxActualTimespan)
-        nActualTimespan = nMaxActualTimespan;
-
-    // Retarget
-    CBigNum bnNew;
-    bnNew.SetCompact(pindexPrev->nBits);
-    bnNew *= nActualTimespan;
-    bnNew /= nAveragingTargetTimespan;
-
-    if (bnNew > Params().ProofOfWorkLimit(algo))
-        bnNew = Params().ProofOfWorkLimit(algo);
-
-    /// debug print
-    LogPrintf("GetNextWorkRequired RETARGET\n");
-    LogPrintf("nTargetTimespan = %d    nActualTimespan = %d\n", nTargetTimespan, nActualTimespan);
-    LogPrintf("Before: %08x  %s\n", pindexLast->nBits, CBigNum().SetCompact(pindexLast->nBits).getuint256().ToString());
-    LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString());
-
-    return bnNew.GetCompact();
-}
 
 static unsigned int GetNextWorkRequiredV3(const CBlockIndex* pindexLast, const CBlockHeader *pblock, int algo)
 {

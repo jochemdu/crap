@@ -4,7 +4,7 @@ Some notes on how to build UnattainiumV2 in Unix.
 
 To Build
 ---------------------
-
+	chmod +x share/genbuild.sh
 	./autogen.sh
 	./configure
 	make
