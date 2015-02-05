@@ -51,9 +51,9 @@ unsigned int nCoinCacheSize = 5000;
 uint256 hashGenesisBlock("0xd9693b5ae46b91e8dfe26c3c0d693f28947b0bce3bec3d26c8179ca4ebaad60d");
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for transaction creation) */
-int64_t CTransaction::nMinTxFee = 200000000000;  // Override with -mintxfee
+int64_t CTransaction::nMinTxFee = 3000000;  // Override with -mintxfee
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying and mining) */
-int64_t CTransaction::nMinRelayTxFee = 200000000000;
+int64_t CTransaction::nMinRelayTxFee = 1000;
 
 static CMedianFilter<int> cPeerBlockCounts(8, 0); // Amount of blocks that other nodes claim to have
 
@@ -1204,8 +1204,8 @@ const CBlockIndex* GetLastBlockIndexForAlgo(const CBlockIndex* pindex, int algo)
 }
 
 // static const int64_t nDiffChangeTarget = 0; // Patch effective @ block 0
-static const int64_t patchBlockRewardDuration = 10080; // 10080 blocks main net change
-static const int64_t patchBlockRewardDuration2 = 80160; // 80160 blocks main net change
+// static const int64_t patchBlockRewardDuration = 10080; // 10080 blocks main net change
+// static const int64_t patchBlockRewardDuration2 = 80160; // 80160 blocks main net change
 
 int64_t GetBlockValue(int nHeight, int64_t nFees)
 {
@@ -1542,16 +1542,6 @@ void UpdateTime(CBlockHeader& block, const CBlockIndex* pindexPrev)
     if (TestNet())
         block.nBits = GetNextWorkRequired(pindexPrev, &block, block.GetAlgo());
 }
-
-
-
-
-
-
-
-
-
-
 
 void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight, const uint256 &txhash)
 {
