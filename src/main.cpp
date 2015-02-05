@@ -51,9 +51,9 @@ unsigned int nCoinCacheSize = 5000;
 uint256 hashGenesisBlock("0xd9693b5ae46b91e8dfe26c3c0d693f28947b0bce3bec3d26c8179ca4ebaad60d");
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for transaction creation) */
-int64_t CTransaction::nMinTxFee = 3000000;  // Override with -mintxfee
+int64_t CTransaction::nMinTxFee = 10000;  // Override with -mintxfee
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying and mining) */
-int64_t CTransaction::nMinRelayTxFee = 1000;
+int64_t CTransaction::nMinRelayTxFee = 10000;
 
 static CMedianFilter<int> cPeerBlockCounts(8, 0); // Amount of blocks that other nodes claim to have
 
@@ -1203,9 +1203,7 @@ const CBlockIndex* GetLastBlockIndexForAlgo(const CBlockIndex* pindex, int algo)
     }
 }
 
-// static const int64_t nDiffChangeTarget = 0; // Patch effective @ block 0
-// static const int64_t patchBlockRewardDuration = 10080; // 10080 blocks main net change
-// static const int64_t patchBlockRewardDuration2 = 80160; // 80160 blocks main net change
+
 
 int64_t GetBlockValue(int nHeight, int64_t nFees)
 {
@@ -1457,7 +1455,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
         pfork = pfork->pprev;
     }
 
-    // We define a condition which we should warn the user about as a fork of at least 7 blocks
+    // We define a condition which we should warn the user about as a fork of at least 20 blocks
     // who's tip is within 72 blocks (+/- 12 hours if no one mines it) of ours
     // We use 7 blocks rather arbitrarily as it represents just under 10% of sustained network
     // hash rate operating on the fork.
@@ -1465,7 +1463,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     // We define it this way because it allows us to only store the highest fork tip (+ base) which meets
     // the 7-block condition and from this always have the most-likely-to-cause-warning fork
     if (pfork && (!pindexBestForkTip || (pindexBestForkTip && pindexNewForkTip->nHeight > pindexBestForkTip->nHeight)) &&
-            pindexNewForkTip->nChainWork - pfork->nChainWork > (pfork->GetBlockWorkAdjusted() * 7).getuint256() &&
+            pindexNewForkTip->nChainWork - pfork->nChainWork > (pfork->GetBlockWorkAdjusted() * 20).getuint256() &&
             chainActive.Height() - pindexNewForkTip->nHeight < 72)
     {
         pindexBestForkTip = pindexNewForkTip;
@@ -1542,6 +1540,16 @@ void UpdateTime(CBlockHeader& block, const CBlockIndex* pindexPrev)
     if (TestNet())
         block.nBits = GetNextWorkRequired(pindexPrev, &block, block.GetAlgo());
 }
+
+
+
+
+
+
+
+
+
+
 
 void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight, const uint256 &txhash)
 {
@@ -1894,7 +1902,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     }
 	
 	// track money supply 
-	pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
+	// pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
 	
     int64_t nTime = GetTimeMicros() - nStart;
     if (fBenchmark)
